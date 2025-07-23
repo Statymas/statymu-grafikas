@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Statymų grafikas</title>
+</head>
+<body>
+  <h1>Labas, pasauli! 🟢</h1>
+  <p>Šis puslapis veikia per GitHub Pages.</p>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kosminis Statymų Valdiklis 2500</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Pagrindinės taisyklės ir reset */
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      height: 100%;
+      overflow-x: hidden;
+      background: #000011;
+      font-family: 'Orbitron', monospace, Arial, sans-serif;
+      color: #a4d8ff;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    /* Kosminio fono konteineris */
+    #space-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      z-index: 0;
+      background: radial-gradient(ellipse at center, #000013 0%, #000000 90%);
+    }
+    /* Žvaigždės – Canvas */
+    #stars-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 1;
+    }
+    /* Žemė */
+    #earth {
+      position: absolute;
+      bottom: 5vh;
+      left: 4vw;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: url('https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74238/world.topo.bathy.200412.3x5400x2700.jpg') no-repeat center;
+      background-size: cover;
+      box-shadow:
+        0 0 65px 20px #2176ff88,
+        inset 0 0 40px 20px #094d9ea0;
+      filter: drop-shadow(0 0 12px #2a7cffcc);
+      animation: slowRotate 120s linear infinite;
+      transform-style: preserve-3d;
+      z-index: 2;
+    }
+    @keyframes slowRotate {
+      from { background-position: 100% center; }
+      to { background-position: 0% center; }
+    }
+    /* Marsas */
+    #mars {
+      position: absolute;
+      top: 10vh;
+      right: 4vw;
+      width: 175px; height: 175px;
+      border-radius: 50%;
+      background: url('https://mars.nasa.gov/system/resources/detail_files/25792_PIA24757-320.jpg') no-repeat center;
+      background-size: cover;
+      box-shadow:
+        0 0 45px 10px #ff593e99,
+        inset 0 0 35px 15px #a3422800;
+      filter: drop-shadow(0 0 10px #f65c3e99);
+      animation: floatUpDown 16s ease-in-out infinite;
+      z-index: 2;
+    }
+    @keyframes floatUpDown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(24px); }
+    }
+    /* Raketa */
+    #rocket-container {
+      position: fixed;
+      top: 28vh;
+      left: -140px;
+      width: 108px;
+      height: 48px;
+      z-index: 10;
+      animation: rocketFly 13s linear infinite;
+      filter: drop-shadow(0 0 14px #4eeeffcc);
+      pointer-events: none;
+    }
+    #rocket {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    #rocket-base {
+      position: absolute;
+      left: 24px; top: 13px;
+      width: 60px; height: 26px;
+      background: linear-gradient(90deg, #4ae0ff 0%, #005aaf 95%);
+      border-radius: 14px / 16px;
+      box-shadow:
+        0 0 20px #3ec8ffd0,
+        inset 0 0 18px #005dadcc;
+    }
+    #rocket-tip {
+      position: absolute;
+      left: 5px; top: 20px;
+      width: 18px; height: 14px;
+      border-radius: 55% 50% 30% 70% / 90% 100% 0% 25%;
+      background: linear-gradient(135deg, #8cf9ff 0%, #259fe5 100%);
+      box-shadow: 0 0 14px #059feeaa;
+      transform: rotate(-12deg);
+    }
+    #rocket-engine {
+      position: absolute;
+      right: 2px; bottom: -8px;
+      width: 32px; height: 28px;
+      background: radial-gradient(circle at 50% 40%, #abfaff 25%, transparent 90%);
+      filter: blur(4.5px);
+      border-radius: 60% 60% 90% 40% / 65% 65% 80% 25%;
+      animation: rocketFlame 0.6s ease-in-out infinite alternate;
+      box-shadow: 0 0 26px #34f0ffff;
+    }
+    @keyframes rocketFlame {
+      0% { opacity: 0.55; transform: scaleX(1) scaleY(1);}
+      50% { opacity: 1; transform: scaleX(1.2) scaleY(1.4);}
+      100% { opacity: 0.55; transform: scaleX(1) scaleY(1);}
+    }
+    @keyframes rocketFly {
+      0%   { left: -160px; top: 28vh; transform: rotate(-10deg) scale(1); opacity: 0; }
+      10%  { opacity: 1; }
+      50%  { left: 52vw; top: 22vh; transform: rotate(6deg) scale(1.15); opacity: 1; }
+      90%  { left: calc(100vw + 150px); top: 14vh; transform: rotate(15deg) scale(1.3); opacity: 0; }
+      100% { left: calc(100vw + 150px); opacity: 0; }
+    }
+    /* Turinio kortelė */
+    .container {
+      position: relative;
+      max-width: 960px;
+      margin: 3.8rem auto 6rem auto;
+      padding: 2.6rem 3.8rem 3.8rem 3.8rem;
+      background-color: rgba(24, 41, 69, 0.79);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      border: 2.8px solid rgba(18, 80, 142, 0.83);
+      box-shadow:
+        0 0 56px 10px rgba(36, 145, 255, 0.35),
+        inset 0 0 42px 10px rgba(14, 71, 150, 0.6);
+      color: #abdfff;
+      font-size: 17px;
+      user-select: text;
+      z-index: 20;
+    }
+    h1 {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 3rem;
+      color: #80c9ff;
+      text-align: center;
+      margin-bottom: 2.2rem;
+      text-shadow: 0 0 28px #339fff88;
+    }
+    form label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+      color: #a5cce6;
+      text-shadow: 0 0 4px #3a85ff8a;
+      user-select:none;
+    }
+    form input, form select {
+      width: 100%;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 0.8rem;
+      border: none;
+      background: linear-gradient(155deg, #b8d8ff 0%, #3568c2 95%);
+      box-shadow: inset 0 0 15px #9dbfffaa;
+      color: #053070;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+      user-select: text;
+      outline-offset: 2px;
+    }
+    form input:focus, form select:focus {
+      outline: none;
+      background: linear-gradient(155deg, #deeeff, #2a5fb5);
+      box-shadow: 0 0 26px #2567db, inset 0 0 28px #4e84df;
+      color: #e8f9ff;
+    }
+    form button {
+      width: 100%;
+      padding: 1.3rem 0;
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      border-radius: 2rem;
+      border: 3px solid #1d6ee0;
+      background: linear-gradient(90deg, #00a1ff 0%, #0056a6 95%);
+      box-shadow: 0 0 40px #0098ffcf;
+      color: #def6ff;
+      cursor: pointer;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+      user-select:none;
+    }
+    form button:hover, form button:focus {
+      background: linear-gradient(90deg, #2cdcff, #0068d9);
+      box-shadow: 0 0 70px #00c7ffdd;
+      outline: none;
+    }
+    /* Lentelė */
+    table {
+      border-collapse: separate;
+      border-spacing: 0 14px;
+      width: 100%;
+      font-size: 1rem;
+      color: #bedfffdd;
+      user-select: none;
+    }
+    th, td {
+      background: linear-gradient(155deg, #073a75, #034689);
+      padding: 1.1rem 1rem;
+      text-align: center;
+      border-radius: 1rem;
+      box-shadow: inset 0 0 22px #1f60fdba;
+      font-weight: 500;
+      font-family: 'Montserrat', sans-serif;
+      transition: background 0.25s ease;
+      border:none;
+    }
+    th {
+      color: #6ab4ff;
+      font-weight: 900;
+      text-shadow: 0 0 14px #2680ffbd;
+    }
+    tbody tr:hover td {
+      background: linear-gradient(130deg, #0a65ca, #3caefe);
+      color: #e8f7ffdd;
+      cursor: default;
+      box-shadow: 0 0 48px #2e96ffcc;
+    }
+    .profit-positive {
+      color: #0ef6ff;
+      font-weight: 700;
+      text-shadow: 0 0 14px #0ff9ff;
+    }
+    .profit-negative {
+      color: #ff5b5b;
+      font-weight: 700;
+      text-shadow: 0 0 16px #ff3232;
+    }
+    #totalProfit {
+      margin: 2.2rem 0 1.4rem 0;
+      font-weight: 900;
+      font-size: 1.5rem;
+      color: #61cbff;
+      text-align: center;
+      text-shadow: 0 0 22px #35aaffcc;
+      user-select:none;
+    }
+    #summaryStats {
+      color: #b4dfffcc;
+      text-align: center;
+      margin-bottom: 3rem;
+      font-weight: 600;
+      font-size: 1.15rem;
+      user-select:none;
+    }
+    /* Pelno grafikas */
+    #profitChart {
+      max-width: 720px;
+      margin: 0 auto 6.5rem auto;
+      background: linear-gradient(130deg, #010f2c, #072a67 95%);
+      border-radius: 2rem;
+      box-shadow: 0 0 75px #10a3ffbb;
+      border: 3px solid #0e8cff;
+      padding: 3rem 3.5rem 3rem 3.5rem;
+      user-select:none;
+    }
+    #profitChart h2 {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.4rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #5fb5ff;
+      text-shadow: 0 0 20px #1898ffcc;
+    }
+    /* Responsive */
+    @media (max-width: 750px) {
+      #earth, #mars {
+        width: 140px;
+        height: 140px;
+      }
+      .container {
+        margin: 3rem 12px 4rem 12px;
+        font-size: 14px;
+        padding: 1.6rem 2rem 2rem 2rem;
+      }
+      form input, form select {
+        font-size: 1rem;
+      }
+      form button {
+        font-size: 1.18rem;
+      }
+      #profitChart {
+        padding: 2rem 2rem 2rem 2rem;
+      }
+      #profitChart h2 {
+        font-size: 1.14rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="space-bg" aria-hidden="true">
+    <canvas id="stars-canvas"></canvas>
+    <div id="earth" aria-label="Žemė, matoma iš kosmoso"></div>
+    <div id="mars" aria-label="Marsas, raudonoji planeta"></div>
+    <div id="rocket-container" aria-hidden="true">
+      <div id="rocket">
+        <div id="rocket-base"></div>
+        <div id="rocket-tip"></div>
+        <div id="rocket-engine"></div>
+      </div>
+    </div>
+  </div>
+
+  <main class="container" role="main" aria-labelledby="pageTitle">
+    <h1 id="pageTitle" tabindex="-1">Kosminis Statymų Valdiklis 2500</h1>
+
+    <form id="betForm" aria-label="Statymo įvedimo forma">
+      <label for="match">Rungtynės:</label>
+      <input type="text" id="match" name="match" required autocomplete="off" />
+
+      <label for="odds">Koeficientas:</label>
+      <input type="number" id="odds" name="odds" step="0.01" min="1" required />
+
+      <label for="stake">Statymo suma (€):</label>
+      <input type="number" id="stake" name="stake" step="0.01" min="0" required />
+
+      <label for="result">Rezultatas:</label>
+      <select id="result" name="result" required>
+        <option value="pending">Laukiama</option>
+        <option value="win">Laimėta</option>
+        <option value="lose">Pralaimėta</option>
+      </select>
+
+      <label for="datetime">Data ir laikas:</label>
+      <input type="datetime-local" id="datetime" name="datetime" required />
+
+      <button type="submit">➕ Pridėti Statymą</button>
+    </form>
+
+    <div role="search" aria-label="Statymų paieška ir filtras" style="margin: 1.2em 0;">
+      <input type="text" id="searchInput" placeholder="Ieškoti rungtynių..." aria-label="Ieškoti rungtynių" />
+      <select id="resultFilter" aria-label="Filtruoti pagal rezultatą" style="margin-left: 12px;">
+        <option value="all">Visi</option>
+        <option value="win">Laimėta</option>
+        <option value="lose">Pralaimėta</option>
+        <option value="pending">Laukiama</option>
+      </select>
+    </div>
+
+    <table role="grid" aria-label="Statymų sąrašas" id="betsTable">
+      <thead>
+        <tr>
+          <th scope="col">Rungtynės</th>
+          <th scope="col">Koef.</th>
+          <th scope="col">Statyta (€)</th>
+          <th scope="col">Rezultatas</th>
+          <th scope="col">Pelnas (€)</th>
+          <th scope="col">ROI (%)</th>
+          <th scope="col">Data/Laikas</th>
+          <th scope="col">Veiksmas</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="totalProfit" role="status" aria-live="polite" aria-atomic="true">Bendras pelnas: 0.00 €</div>
+    <div id="summaryStats" aria-live="polite"></div>
+
+    <section id="profitChart" aria-label="Pelno grafikas">
+      <h2>Pelno grafikas</h2>
+      <canvas id="chartCanvas" width="650" height="320" style="display:block; margin: 0 auto;"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const starsCanvas = document.getElementById('stars-canvas');
+    const ctx = starsCanvas.getContext('2d');
+    function resizeCanvas() {
+      starsCanvas.width = window.innerWidth;
+      starsCanvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    const stars = [];
+    const starsCount = 250;
+    for(let i = 0; i < starsCount; i++) {
+      stars.push({
+        x: Math.random() * starsCanvas.width,
+        y: Math.random() * starsCanvas.height,
+        r: 0.3 + Math.random() * 1.4,
+        twinkle: Math.random() * 1.5 + 0.5,
+        intensity: Math.random(),
+        speed: 0.012 + Math.random() * 0.045
+      });
+    }
+    function drawStars(time) {
+      ctx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+      stars.forEach(star => {
+        star.y += star.speed;
+        if (star.y > starsCanvas.height) star.y = 0;
+        let alpha = (Math.sin(time/600 * star.twinkle) + 1) / 2 * star.intensity;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+        ctx.shadowColor = `rgba(255,255,255,${alpha.toFixed(2)})`;
+        ctx.shadowBlur = star.r * 6;
+        ctx.fill();
+      });
+      requestAnimationFrame(drawStars);
+    }
+    requestAnimationFrame(drawStars);
+
+    /* Statymų logika */
+    const form = document.getElementById('betForm');
+    const tableBody = document.querySelector('#betsTable tbody');
+    const totalProfitEl = document.getElementById('totalProfit');
+    const summaryStatsEl = document.getElementById('summaryStats');
+    const chartCanvas = document.getElementById('chartCanvas');
+    const searchInput = document.getElementById('searchInput');
+    const resultFilter = document.getElementById('resultFilter');
+    let bets = JSON.parse(localStorage.getItem('bets')) || [];
+    let chart;
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderBets() {
+      tableBody.innerHTML = '';
+      let totalProfit = 0;
+      let cumulativeProfit = 0;
+      const labels = [];
+      const data = [];
+      let wins = 0, losses = 0, pending = 0;
+
+      const filteredBets = bets.filter(bet => {
+        if (resultFilter.value === 'all') return true;
+        return bet.result === resultFilter.value;
+      }).filter(bet => {
+        return bet.match.toLowerCase().includes(searchInput.value.toLowerCase());
+      });
+
+      filteredBets.forEach((bet, index) => {
+        let profit, roi;
+
+        if (bet.result === 'win') {
+          profit = (bet.odds * bet.stake - bet.stake);
+          roi = (profit / bet.stake) * 100;
+          wins++;
+        } else if (bet.result === 'lose') {
+          profit = -bet.stake;
+          roi = -100;
+          losses++;
+        } else {
+          profit = 0;
+          roi = 0;
+          pending++;
+        }
+
+        cumulativeProfit += profit;
+        totalProfit += profit;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${escapeHtml(bet.match)}</td>
+          <td>${bet.odds.toFixed(2)}</td>
+          <td>${bet.stake.toFixed(2)}</td>
+          <td>${bet.result === 'win' ? '✅ Laimėta' : bet.result === 'lose' ? '❌ Pralaimėta' : '⏳ Laukiama'}</td>
+          <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profit.toFixed(2)}</td>
+          <td>${roi.toFixed(2)}%</td>
+          <td>${new Date(bet.datetime).toLocaleString('lt-LT')}</td>
+          <td>
+            ${bet.result === 'pending' ? `
+              <button onclick="updateResult(${bets.indexOf(bet)}, 'win')">Laimėta</button>
+              <button onclick="updateResult(${bets.indexOf(bet)}, 'lose')">Pralaimėta</button>
+            ` : `<button onclick="deleteBet(${bets.indexOf(bet)})">🗑️</button>`}
+          </td>
+        `;
+        tableBody.appendChild(row);
+
+        labels.push(`#${index + 1}`);
+        data.push(cumulativeProfit.toFixed(2));
+      });
+
+      totalProfitEl.innerHTML = `Bendras pelnas: <span class="${totalProfit >= 0 ? 'profit-positive' : 'profit-negative'}">${totalProfit.toFixed(2)} €</span>`;
+
+      const winRate = (wins + losses) === 0 ? 0 : ((wins / (wins + losses)) * 100).toFixed(2);
+      summaryStatsEl.innerHTML = `Laimėjimai: ${wins} | Pralaimėjimai: ${losses} | Laukiama: ${pending} | Laimėjimų %: ${winRate}%`;
+
+      updateChart(labels, data);
+    }
+
+    function updateChart(labels, data) {
+      if (chart) chart.destroy();
+      if (!labels.length) {
+        chartCanvas.width = 400;
+        chartCanvas.height = 80;
+        chartCanvas.getContext('2d').clearRect(0, 0, 400, 80);
+        chart = null;
+        return;
+      }
+      chart = new Chart(chartCanvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Kaupiamasis pelnas (€)',
+            data,
+            borderColor: '#36c6ff',
+            backgroundColor: 'rgba(54, 198, 255, 0.14)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#9effff',
+            borderWidth: 3,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              ticks: {
+                color: '#a0d9ff',
+                font: { family: "'Orbitron', monospace", weight: 'bold' }
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              ticks: {
+                color: '#8ad9ff',
+                font: { family: "'Orbitron', monospace" }
+              },
+              grid: {
+                color: '#1f3f5b'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#36c6ff', font: { size: 16, weight: 'bold' } },
+              position: 'top'
+            },
+            tooltip: {
+              backgroundColor: '#034363',
+              borderColor: '#36c6ff',
+              borderWidth: 1,
+              titleColor: '#9fdbff',
+              bodyColor: '#ddf7ff'
+            }
+          }
+        }
+      });
+    }
+
+    function deleteBet(index) {
+      if (confirm('Ar tikrai nori pašalinti šį statymą?')) {
+        bets.splice(index, 1);
+        localStorage.setItem('bets', JSON.stringify(bets));
+        renderBets();
+      }
+    }
+
+    function updateResult(index, result) {
+      bets[index].result = result;
+      localStorage.setItem('bets', JSON.stringify(bets));
+      renderBets();
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const match = document.getElementById('match').value.trim();
+      const odds = parseFloat(document.getElementById('odds').value);
+      const stake = parseFloat(document.getElementById('stake').value);
+      const result = document.getElementById('result').value;
+      const datetime = document.getElementById('datetime').value;
+      if (!match || isNaN(odds) || odds < 1 || isNaN(stake) || stake < 0 || !datetime) {
+        alert('Užpildykite visus laukus, koeficientas ≥1, suma ≥0.');
+        return;
+      }
+      bets.push({ match, odds, stake, result, datetime });
+      localStorage.setItem('bets', JSON.stringify(bets));
+      form.reset();
+      renderBets();
+    });
+
+    searchInput.addEventListener('input', renderBets);
+    resultFilter.addEventListener('change', renderBets);
+
+    renderBets();
+  </script>
+</body>
+</html>
